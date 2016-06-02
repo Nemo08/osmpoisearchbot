@@ -10,6 +10,8 @@ import (
 	"gopkg.in/telegram-bot-api.v4"
 )
 
+const version = "1.1.2"
+
 func main() {
 	bot, err := tgbotapi.NewBotAPI(telegramkey)
 	if err != nil {
@@ -17,7 +19,7 @@ func main() {
 	}
 
 	bot.Debug = true
-	
+
 	// Авторизация бота
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
@@ -25,16 +27,14 @@ func main() {
 	u.Timeout = 60
 
 	updates, err := bot.GetUpdatesChan(u)
-	
+
 	// Бесконечно ждем апдейтов от сервера
 	for update := range updates {
 		switch {
 		// Пришло обычное сообщение
 		case update.Message != nil:
-			/*
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "hello")
-				bot.Send(msg)
-			*/
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Hi!\n\nI'm inline OSM POI search bot v."+version+", type @"+bot.Self.UserName+" in message field")
+			bot.Send(msg)
 			break
 		// Пришел inline запрос
 		case update.InlineQuery != nil:
@@ -50,8 +50,7 @@ func main() {
 				body, err := ioutil.ReadAll(res.Body)
 
 				resp := new(Places)
-				var resources []interface{}
-				
+
 				// Разбираем ответ
 				err = json.Unmarshal(body, &resp)
 
@@ -59,45 +58,48 @@ func main() {
 					log.Printf("whoops:", err)
 				}
 
+				var resources []interface{}
 				// Если ответ не нулевой
 				if len(resp.Matches) != 0 {
 					for k, i := range resp.Matches {
-						log.Printf(i.Name, i.FullName)
-
 						// Формируем меню venue с полученными пои
-						resloc := InlineQueryResultVenue{}
-						resloc.ID = strconv.Itoa(k)
-						if i.Name == "" {
-							resloc.Title = "Имя не задано"
-						} else {
-							resloc.Title = i.Name
+						title := "Имя не задано"
+						if i.Name != "" {
+							title = i.Name
 						}
-						resloc.Type = "venue"
-						resloc.Longitude = i.Lon
-						resloc.Latitude = i.Lat
-						resloc.Address = i.FullName
-
 						xt, yt := tilenumber(i.Lat, i.Lon, 19)
-						resloc.ThumbURL = "https://c.tile.openstreetmap.org/19/" + xt + "/" + yt + ".png"
-						resloc.InputMessageContent = tgbotapi.InputVenueMessageContent{Latitude: i.Lat, Longitude: i.Lon, Title: i.Name, Address: i.FullName}
 
-						resources = append(resources, resloc)
+						resources = append(resources,
+							InlineQueryResultVenue{
+								Type:      "venue",
+								ID:        strconv.Itoa(k),
+								Latitude:  i.Lat,
+								Longitude: i.Lon,
+								Title:     title,
+								Address:   i.FullName,
+								InputMessageContent: tgbotapi.InputVenueMessageContent{
+									Latitude:  i.Lat,
+									Longitude: i.Lon,
+									Title:     i.Name,
+									Address:   i.FullName},
+								ThumbURL: "https://c.tile.openstreetmap.org/19/" + xt + "/" + yt + ".png"})
 					}
 				} else {
 					// Формируем плашку "ничего не найдено"
-					resloc := tgbotapi.InlineQueryResultArticle{}
-					resloc.ID = update.InlineQuery.ID
-					resloc.Type = "article"
-					resloc.Title = "Ничего не найдено"
-					resloc.Description = "По вашему запросу '" + update.InlineQuery.Query + "' ничего не найдено. Измените запрос"
-					resloc.InputMessageContent = tgbotapi.InputTextMessageContent{Text: "По вашему запросу ничего не найдено"}
-					resources = append(resources, resloc)
+					resources = append(resources,
+						tgbotapi.InlineQueryResultArticle{
+							Type:  "article",
+							ID:    update.InlineQuery.ID,
+							Title: "Ничего не найдено",
+							InputMessageContent: tgbotapi.InputTextMessageContent{
+								Text: "По вашему запросу ничего не найдено"},
+							Description: "По вашему запросу '" + update.InlineQuery.Query + "' ничего не найдено. Измените запрос"})
 				}
 				// Отправляем меню пользователю
-				ic := tgbotapi.InlineConfig{}
-				ic.InlineQueryID = update.InlineQuery.ID
-				ic.Results = resources
-				bot.AnswerInlineQuery(ic)
+				bot.AnswerInlineQuery(
+					tgbotapi.InlineConfig{
+						InlineQueryID: update.InlineQuery.ID,
+						Results:       resources})
 			}
 			break
 		}
