@@ -10,7 +10,7 @@ import (
 	"gopkg.in/telegram-bot-api.v4"
 )
 
-const version = "1.1.2"
+const version = "1.1.3"
 
 func main() {
 	bot, err := tgbotapi.NewBotAPI(telegramkey)
@@ -59,8 +59,9 @@ func main() {
 				}
 
 				var resources []interface{}
+
 				// Если ответ не нулевой
-				if len(resp.Matches) != 0 {
+				if (len(resp.Matches) != 0) && (resp.Search == update.InlineQuery.Query) {
 					for k, i := range resp.Matches {
 						// Формируем меню venue с полученными пои
 						title := "Имя не задано"
@@ -75,7 +76,7 @@ func main() {
 								ID:        strconv.Itoa(k),
 								Latitude:  i.Lat,
 								Longitude: i.Lon,
-								Title:     title,
+								Title:     title + " : " + strconv.FormatInt(Round(Distance(i.Lat, i.Lon, update.InlineQuery.Location.Latitude, update.InlineQuery.Location.Longitude)), 10) + "м",
 								Address:   i.FullName,
 								InputMessageContent: tgbotapi.InputVenueMessageContent{
 									Latitude:  i.Lat,
