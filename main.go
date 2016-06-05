@@ -20,10 +20,10 @@ func main() {
 
 	bot, err := tgbotapi.NewBotAPI(telegramkey)
 	if err != nil {
-		log.Panic("Error with key?", err)
+		log.Panic("Wrong key:", telegramkey, err)
 	}
 
-	bot.Debug = true
+	bot.Debug = config.GetBoolKey("", "debug")
 
 	// Авторизация бота
 	log.Printf("Authorized on account %s", bot.Self.UserName)
