@@ -11,7 +11,7 @@ import (
 	"gopkg.in/telegram-bot-api.v4"
 )
 
-const version = "1.1.3"
+const version = "1.1.4"
 
 func main() {
 	config := new(IniConf)
