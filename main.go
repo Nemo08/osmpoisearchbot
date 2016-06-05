@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"gopkg.in/telegram-bot-api.v4"
@@ -13,9 +14,13 @@ import (
 const version = "1.1.3"
 
 func main() {
+	config := new(IniConf)
+	config.CheckAndLoadConf("config" + string(os.PathSeparator) + "opsconfig.ini")
+	telegramkey := config.GetStringKey("", "telegramkey")
+
 	bot, err := tgbotapi.NewBotAPI(telegramkey)
 	if err != nil {
-		log.Panic(err)
+		log.Panic("Error with key?", err)
 	}
 
 	bot.Debug = true
