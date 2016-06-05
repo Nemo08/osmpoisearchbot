@@ -5,20 +5,25 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"gopkg.in/telegram-bot-api.v4"
 )
 
-const version = "1.1.2"
+const version = "1.1.4"
 
 func main() {
+	config := new(IniConf)
+	config.CheckAndLoadConf("config" + string(os.PathSeparator) + "opsconfig.ini")
+	telegramkey := config.GetStringKey("", "telegramkey")
+
 	bot, err := tgbotapi.NewBotAPI(telegramkey)
 	if err != nil {
-		log.Panic(err)
+		log.Panic("Wrong key:", telegramkey, err)
 	}
 
-	bot.Debug = true
+	bot.Debug = config.GetBoolKey("", "debug")
 
 	// Авторизация бота
 	log.Printf("Authorized on account %s", bot.Self.UserName)
@@ -59,8 +64,9 @@ func main() {
 				}
 
 				var resources []interface{}
+
 				// Если ответ не нулевой
-				if len(resp.Matches) != 0 {
+				if (len(resp.Matches) != 0) && (resp.Search == update.InlineQuery.Query) {
 					for k, i := range resp.Matches {
 						// Формируем меню venue с полученными пои
 						title := "Имя не задано"
@@ -75,7 +81,7 @@ func main() {
 								ID:        strconv.Itoa(k),
 								Latitude:  i.Lat,
 								Longitude: i.Lon,
-								Title:     title,
+								Title:     title + " : " + strconv.FormatInt(Round(Distance(i.Lat, i.Lon, update.InlineQuery.Location.Latitude, update.InlineQuery.Location.Longitude)), 10) + "м",
 								Address:   i.FullName,
 								InputMessageContent: tgbotapi.InputVenueMessageContent{
 									Latitude:  i.Lat,
